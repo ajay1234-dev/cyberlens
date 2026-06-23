@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { Target, AlertCircle, Skull, Zap, ShieldAlert, Loader2 } from 'lucide-react';
+import { Target, AlertCircle, Skull, Zap, ShieldAlert, Loader2, RefreshCw } from 'lucide-react';
 import { useRiskStore } from '../../store/risk-store';
 
 const AttackerPanel: React.FC = () => {
@@ -7,19 +7,49 @@ const AttackerPanel: React.FC = () => {
   const hasRequested = useRef(false);
 
   useEffect(() => {
-    if (riskReport && !attackerReport && !attackerError && !hasRequested.current) {
-      hasRequested.current = true;
-      chrome.runtime.sendMessage({ type: 'REQUEST_ATTACKER_VIEW', payload: riskReport, tabId: activeTabId });
-    }
-  }, [riskReport, attackerReport, attackerError, activeTabId]);
+    // Reset request flag when a new report arrives
+    hasRequested.current = false;
+  }, [riskReport?.url]);
 
-  const handleRetry = () => {
-    if (riskReport) {
+  useEffect(() => {
+    if (riskReport && activeTabId && !attackerReport && !attackerError && !hasRequested.current) {
       hasRequested.current = true;
       startAttackerLoad();
-      chrome.runtime.sendMessage({ type: 'REQUEST_ATTACKER_VIEW', payload: riskReport, tabId: activeTabId });
+      chrome.runtime.sendMessage(
+        { type: 'REQUEST_ATTACKER_VIEW', payload: riskReport, tabId: activeTabId },
+        () => {
+          if (chrome.runtime.lastError) {
+            // handled by App.tsx error listener
+          }
+        }
+      );
+    }
+  }, [riskReport, attackerReport, attackerError, startAttackerLoad, activeTabId]);
+
+  const handleRetry = () => {
+    if (riskReport && activeTabId) {
+      hasRequested.current = true;
+      startAttackerLoad();
+      chrome.runtime.sendMessage(
+        { type: 'REQUEST_ATTACKER_VIEW', payload: riskReport, tabId: activeTabId },
+        () => {
+          if (chrome.runtime.lastError) {
+            // handled by App.tsx error listener
+          }
+        }
+      );
     }
   };
+
+  // Loading state — waiting for page report
+  if (!riskReport) {
+    return (
+      <div className="flex flex-col h-full items-center justify-center text-slate-400 gap-3">
+        <Loader2 className="w-6 h-6 animate-spin text-danger" />
+        <p className="text-sm">Waiting for page analysis...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col h-full pb-4">
@@ -40,7 +70,7 @@ const AttackerPanel: React.FC = () => {
           ))}
           <div className="flex items-center justify-center text-danger mt-4">
             <Loader2 className="w-4 h-4 animate-spin mr-2" />
-            <span className="text-xs">Generating threat intelligence...</span>
+            <span className="text-xs">Ollama llama3.2:3b generating threat intelligence...</span>
           </div>
         </div>
       ) : attackerReport ? (
@@ -62,9 +92,9 @@ const AttackerPanel: React.FC = () => {
           </div>
 
           {/* Attacker's Goal */}
-          <div className="bg-cyber-card rounded-lg p-3 border-l-2 border-l-warning relative overflow-hidden">
+          <div className="bg-cyber-card rounded-lg p-3 border-l-2 border-l-caution relative overflow-hidden">
             <div className="flex items-center gap-2 mb-1.5">
-              <Target className="w-4 h-4 text-warning" />
+              <Target className="w-4 h-4 text-caution" />
               <h3 className="text-xs font-bold text-white uppercase tracking-wider">Attacker's Goal</h3>
             </div>
             <p className="text-xs text-slate-300 leading-relaxed">
@@ -73,9 +103,9 @@ const AttackerPanel: React.FC = () => {
           </div>
 
           {/* Exploit Vector */}
-          <div className="bg-cyber-card rounded-lg p-3 border-l-2 border-l-caution relative overflow-hidden">
+          <div className="bg-cyber-card rounded-lg p-3 border-l-2 border-l-warning relative overflow-hidden">
             <div className="flex items-center gap-2 mb-1.5">
-              <Zap className="w-4 h-4 text-caution" />
+              <Zap className="w-4 h-4 text-warning" />
               <h3 className="text-xs font-bold text-white uppercase tracking-wider">Exploit Vector</h3>
             </div>
             <p className="text-xs text-slate-300 leading-relaxed font-mono bg-black/20 p-1.5 rounded">
@@ -95,18 +125,19 @@ const AttackerPanel: React.FC = () => {
           </div>
         </div>
       ) : (
-        <div className="bg-warning/10 border border-warning/30 rounded-lg p-4 mt-2">
-          <div className="flex items-center gap-2 text-warning mb-2">
+        <div className="bg-danger/10 border border-danger/30 rounded-lg p-4 mt-2">
+          <div className="flex items-center gap-2 text-danger mb-2">
             <AlertCircle className="w-4 h-4" />
             <span className="text-sm font-semibold">Analysis Failed</span>
           </div>
-          <p className="text-xs text-warning/80 mb-4 leading-relaxed">
+          <p className="text-xs text-danger/80 mb-4 leading-relaxed">
             {attackerError || 'Could not generate attacker view.'}
           </p>
           <button
             onClick={handleRetry}
-            className="px-3 py-1.5 bg-warning/20 hover:bg-warning/30 text-warning text-xs font-medium rounded transition-colors"
+            className="flex items-center gap-2 px-3 py-1.5 bg-danger/20 hover:bg-danger/30 text-danger text-xs font-medium rounded transition-colors"
           >
+            <RefreshCw className="w-3 h-3" />
             Retry Analysis
           </button>
         </div>

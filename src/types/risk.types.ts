@@ -104,6 +104,22 @@ export interface DownloadScanResult {
   hasRiskyDownload: boolean;
 }
 
+// ─── URL Threat Analysis ──────────────────────────────────────────────────────
+
+export interface UrlThreatSignal {
+  type: string;
+  description: string;
+  severity: 'low' | 'medium' | 'high' | 'critical';
+  score: number;
+}
+
+export interface UrlThreatResult {
+  signals: UrlThreatSignal[];
+  totalDeduction: number;
+  isDefinitelyMalicious: boolean;
+  summary: string;
+}
+
 // ─── Trust Score ──────────────────────────────────────────────────────────────
 
 export interface TrustScoreBreakdown {
@@ -112,6 +128,8 @@ export interface TrustScoreBreakdown {
   fieldDeduction: number;
   permissionDeduction: number;
   downloadDeduction: number;
+  urlDeduction: number;    // URL-based threat signals
+  aiDeduction: number;     // NEW: Dynamic AI threat score
   httpsBonus: number;
   final: number;
 }
@@ -131,6 +149,8 @@ export interface RiskReport {
   downloadScan: DownloadScanResult;
   isHttps: boolean;
   metaSignals: MetaSignals;
+  urlThreats: UrlThreatResult;
+  aiThreats: import('../engines/ai-threat-analyzer').AiThreatResult;
 }
 
 export interface MetaSignals {

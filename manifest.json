@@ -9,10 +9,13 @@
     "downloads",
     "notifications",
     "scripting",
-    "tabs"
+    "tabs",
+    "webRequest",
+    "webRequestBlocking"
   ],
   "host_permissions": [
     "http://localhost:11434/*",
+    "http://127.0.0.1:11434/*",
     "<all_urls>"
   ],
   "background": {
@@ -21,8 +24,12 @@
   },
   "content_scripts": [
     {
-      "matches": ["<all_urls>"],
-      "js": ["src/content/index.ts"],
+      "matches": [
+        "<all_urls>"
+      ],
+      "js": [
+        "src/content/index.ts"
+      ],
       "run_at": "document_idle",
       "all_frames": false
     }
@@ -45,8 +52,12 @@
   },
   "web_accessible_resources": [
     {
-      "resources": ["assets/*"],
-      "matches": ["<all_urls>"]
+      "resources": [
+        "assets/*"
+      ],
+      "matches": [
+        "<all_urls>"
+      ]
     }
   ]
 }

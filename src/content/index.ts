@@ -92,11 +92,15 @@ function initialize(): void {
     log.info('Content script cleaned up on unload');
   }, { once: true });
 
-  // 5. Listen for messages from background (e.g., MENTOR_TOKEN forwarded to popup)
+  // 5. Listen for messages from popup
   chrome.runtime.onMessage.addListener((rawMessage: unknown) => {
-    // Content script doesn't need to handle messages in the current architecture
-    // This listener intentionally left as a hook for future expansion
-    void rawMessage;
+    if (typeof rawMessage === 'object' && rawMessage !== null) {
+      const msg = rawMessage as { type?: string };
+      if (msg.type === 'FORCE_SCAN') {
+        log.info('FORCE_SCAN received from popup, running analysis...');
+        void runAnalysis();
+      }
+    }
     return false;
   });
 

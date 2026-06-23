@@ -39,17 +39,17 @@ const TACTIC_PATTERNS: TacticPattern[] = [
     patterns: [
       /account\s+suspended/gi,
       /verify\s+immediately/gi,
-      /security\s+alert/gi,
-      /action\s+required/gi,
-      /unauthorized\s+access/gi,
+      /security\s+alert[!:]\s/gi,                  // "security alert!" not "security alert: here's how"
+      /unauthorized\s+access\s+detected/gi,         // more specific
       /your\s+account\s+(has\s+been|is|was)\s+(compromised|hacked|locked)/gi,
-      /suspicious\s+activity/gi,
+      /suspicious\s+activity\s+detected/gi,         // more specific than just "suspicious activity"
       /immediately\s+confirm/gi,
       /your\s+(password|account|data)\s+(is\s+at\s+risk|has\s+been\s+breached)/gi,
-      /warning[!:]/gi,
-      /critical\s+error/gi,
+      /critical\s+security\s+warning/gi,            // "critical security warning" not just "warning:"
       /virus\s+detected/gi,
-      /malware\s+found/gi,
+      /malware\s+(found|detected)/gi,
+      /your\s+computer\s+(is|has\s+been)\s+(infected|hacked)/gi,
+      /action\s+required/gi,
     ],
   },
   {

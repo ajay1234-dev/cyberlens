@@ -16,13 +16,24 @@ function makeReport(overrides: Partial<RiskReport> = {}): RiskReport {
     analyzedAt:   Date.now(),
     threatLevel:  ThreatLevel.CAUTION,
     trustScore:   65,
-    scoreBreakdown: { base: 100, psychDeduction: 10, fieldDeduction: 10, permissionDeduction: 5, downloadDeduction: 0, httpsBonus: 5, final: 65 },
+    scoreBreakdown: { base: 65, psychDeduction: 10, fieldDeduction: 10, permissionDeduction: 5, downloadDeduction: 0, urlDeduction: 0, aiDeduction: 0, httpsBonus: 5, final: 45 },
     psychDetection: { tactics: [TacticType.URGENCY], instances: [] },
     fieldScan:    { fields: [{ kind: 'email', tag: 'input', type: 'email', name: 'email', id: 'email', placeholder: 'Email', formAction: 'https://example.com/submit', formActionIsHttps: true, isThirdPartyAction: false }], highRisk: false, formCount: 1 },
     permissionScan: { requests: [], hasHighRiskPermissions: false },
     downloadScan:   { downloads: [], hasRiskyDownload: false },
     isHttps:      true,
     metaSignals:  { hasPrivacyPolicy: true, hasContactInfo: false, hasSecureForms: true, domainAge: 'unknown' },
+    urlThreats: {
+      signals: [],
+      totalDeduction: 0,
+      isDefinitelyMalicious: false,
+      summary: 'No URL threats',
+    },
+    aiThreats: {
+      score: 0,
+      reason: 'Safe',
+      isMalicious: false,
+    },
     ...overrides,
   };
 }

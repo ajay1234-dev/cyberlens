@@ -1,5 +1,5 @@
 import React, { ReactNode } from 'react';
-import { Bot, Target, Fingerprint, Camera, Mic, MapPin, Bell } from 'lucide-react';
+import { Bot, Target, Fingerprint, Camera, Mic, MapPin, Bell, AlertCircle } from 'lucide-react';
 import { useRiskStore } from '../../store/risk-store';
 import TrustRing from './TrustRing';
 import RiskList from './RiskList';
@@ -12,13 +12,32 @@ interface OverviewPanelProps {
 }
 
 const OverviewPanel: React.FC<OverviewPanelProps> = ({ onTabChange }) => {
-  const { riskReport } = useRiskStore();
+  const { riskReport, analysisError } = useRiskStore();
+
+  if (analysisError) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full text-danger gap-4 px-4 text-center">
+        <AlertCircle className="w-8 h-8" />
+        <div>
+          <p className="text-sm font-medium mb-1">Analysis Failed</p>
+          <p className="text-xs opacity-80 leading-relaxed">
+            {analysisError}
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   if (!riskReport) {
     return (
-      <div className="flex flex-col items-center justify-center h-full text-slate-400">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-accent mb-4"></div>
-        <p>Analyzing page...</p>
+      <div className="flex flex-col items-center justify-center h-full text-slate-400 gap-4 px-4 text-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-accent"></div>
+        <div>
+          <p className="text-sm font-medium text-slate-300 mb-1">Analyzing page...</p>
+          <p className="text-xs text-slate-500 leading-relaxed">
+            Navigate to a website (not a browser internal page) to see the security analysis.
+          </p>
+        </div>
       </div>
     );
   }
@@ -46,6 +65,40 @@ const OverviewPanel: React.FC<OverviewPanelProps> = ({ onTabChange }) => {
   return (
     <div className="flex flex-col pb-6">
       <TrustRing score={riskReport.trustScore} />
+
+      {/* URL Threat Warning Banner — shown when critical URL signals detected */}
+      {riskReport.urlThreats && riskReport.urlThreats.signals.length > 0 && (
+        <div className={`mx-1 mb-3 rounded-lg border px-3 py-2 ${
+          riskReport.urlThreats.isDefinitelyMalicious
+            ? 'bg-red-950/60 border-red-500/60'
+            : 'bg-orange-950/50 border-orange-500/50'
+        }`}>
+          <div className="flex items-start gap-2">
+            <AlertCircle className={`w-4 h-4 mt-0.5 flex-shrink-0 ${
+              riskReport.urlThreats.isDefinitelyMalicious ? 'text-red-400' : 'text-orange-400'
+            }`} />
+            <div>
+              <p className={`text-xs font-semibold mb-1 ${
+                riskReport.urlThreats.isDefinitelyMalicious ? 'text-red-300' : 'text-orange-300'
+              }`}>
+                {riskReport.urlThreats.isDefinitelyMalicious
+                  ? '⚠ URL Identified as Malicious'
+                  : '⚠ Suspicious URL Detected'}
+              </p>
+              {riskReport.urlThreats.signals.slice(0, 2).map((sig, i) => (
+                <p key={i} className="text-[10px] text-slate-300 leading-snug mb-0.5">
+                  • {sig.description}
+                </p>
+              ))}
+              {riskReport.urlThreats.signals.length > 2 && (
+                <p className="text-[10px] text-slate-500">
+                  +{riskReport.urlThreats.signals.length - 2} more signal(s)
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Tactic Badges */}
       {riskReport.psychDetection.tactics.length > 0 && (

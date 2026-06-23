@@ -23,6 +23,18 @@ function makeInput(overrides: Partial<ScorerInput> = {}): ScorerInput {
       hasSecureForms:   false,
       domainAge:        'unknown',
     },
+    urlThreats: {
+      signals: [],
+      totalDeduction: 0,
+      isDefinitelyMalicious: false,
+      summary: 'No URL threats',
+    },
+    aiThreats: {
+      score: 0,
+      reason: 'Safe',
+      isMalicious: false,
+    },
+    isTrustedDomain: false,
     ...overrides,
   };
 }
@@ -32,22 +44,26 @@ describe('trust-scorer', () => {
   // ─── Baseline ──────────────────────────────────────────────────────────────
 
   describe('computeTrustScore', () => {
-    it('returns 100 base for a clean page with HTTPS (before bonus)', () => {
-      const result = computeTrustScore(makeInput({ isHttps: false }));
-      // Clean page with HTTP: no bonus, no deductions → 100
-      expect(result.final).toBe(100);
-      expect(result.base).toBe(100);
+    it('uses base 65 for unknown HTTP domains', () => {
+      const result = computeTrustScore(makeInput({ isHttps: false, isTrustedDomain: false }));
+      // Unknown domain, HTTP: base=65 minus HTTP deduction, no other deductions
+      expect(result.base).toBe(65);
+      expect(result.final).toBeLessThanOrEqual(75);
+    });
+
+    it('uses base 85 for trusted domains', () => {
+      const result = computeTrustScore(makeInput({ isHttps: true, isTrustedDomain: true }));
+      expect(result.base).toBe(85);
+      expect(result.final).toBeGreaterThan(80);
     });
 
     it('adds HTTPS bonus for a clean HTTPS page', () => {
       const result = computeTrustScore(makeInput({ isHttps: true }));
       expect(result.httpsBonus).toBeGreaterThan(0);
-      // Score is clamped to 100 max — bonus pushes it to 105 internally but clamps to 100
-      expect(result.final).toBe(100);
     });
 
     it('clamps final score to 100 maximum', () => {
-      const result = computeTrustScore(makeInput({ isHttps: true }));
+      const result = computeTrustScore(makeInput({ isHttps: true, isTrustedDomain: true }));
       expect(result.final).toBeLessThanOrEqual(100);
     });
 

@@ -122,11 +122,12 @@ export function installTabListeners(): void {
     log.debug(`Tab ${tabId} removed — cache cleared`);
   });
 
-  // Clear cache when a tab navigates to a new URL
+  // Clear cache when a tab navigates or reloads
   chrome.tabs.onUpdated.addListener((tabId, changeInfo) => {
-    if (changeInfo.status === 'loading' && changeInfo.url !== undefined) {
+    // If the status is loading (page reload/navigation) or the URL explicitly changed (SPA)
+    if (changeInfo.status === 'loading' || changeInfo.url !== undefined) {
       tabManager.clearTab(tabId);
-      log.debug(`Tab ${tabId} navigated — cache cleared`);
+      log.debug(`Tab ${tabId} navigated/reloaded — cache cleared`);
     }
   });
 

@@ -36,6 +36,7 @@ interface RiskState {
   // Loading state
   isAnalyzing: boolean;
   lastAnalyzedAt: number | null;
+  analysisError: string | null;
 
   // Track the active tab ID for background requests
   activeTabId: number | null;
@@ -46,6 +47,9 @@ interface RiskState {
 interface RiskActions {
   /** Set the active tab ID */
   setActiveTabId: (id: number) => void;
+
+  /** Set an error message if page analysis completely fails or content script is missing */
+  setAnalysisError: (error: string) => void;
 
   /** Called when a full RiskReport is received from the content script */
   setRiskReport: (report: RiskReport) => void;
@@ -94,6 +98,7 @@ const initialState: RiskState = {
   attackerError:     null,
   isAnalyzing:       false,
   lastAnalyzedAt:    null,
+  analysisError:     null,
   activeTabId:       null,
 };
 
@@ -106,6 +111,10 @@ export const useRiskStore = create<RiskState & RiskActions>()(
 
       setActiveTabId: (id) => {
         set({ activeTabId: id }, false, 'setActiveTabId');
+      },
+
+      setAnalysisError: (error) => {
+        set({ analysisError: error }, false, 'setAnalysisError');
       },
 
       setRiskReport: (report) => {
@@ -121,6 +130,7 @@ export const useRiskStore = create<RiskState & RiskActions>()(
             threats:        buildThreats(report),
             isAnalyzing:    false,
             lastAnalyzedAt: report.analyzedAt,
+            analysisError:  null,
             // Reset AI state for the new report
             mentorText:        '',
             isMentorStreaming:  false,

@@ -1,6 +1,6 @@
 /**
  * GuardianEye — Risk Aggregator
- * Merges outputs of all 5 engines into a single RiskReport object.
+ * Merges outputs of all engines into a single RiskReport object.
  */
 
 import { detectPsychTactics } from './psych-detector';
@@ -8,18 +8,13 @@ import { scanFields } from './field-scanner';
 import { getPermissionScanResult } from './permission-engine';
 import { getDownloadScanResult } from './download-analyzer';
 import { computeTrustScore, detectMetaSignals, scoreToThreatLevel } from './trust-scorer';
+import { analyzeUrl, getUrlTrustModifier } from './url-threat-analyzer';
+import { analyzePageDynamically } from './ai-threat-analyzer';
 import type { RiskReport } from '@/types/risk.types';
 import { createLogger } from '@/utils/logger';
 
 const log = createLogger('risk-aggregator');
 
-/**
- * Aggregates all engine results into a single RiskReport.
- * Runs psych detection and field scanning on the live DOM.
- * Permission and download scans read from their cached state.
- *
- * @param url - The current page URL
- */
 export async function aggregateRisks(url: string): Promise<RiskReport> {
   log.info('Aggregating risks for', url);
 
@@ -29,19 +24,31 @@ export async function aggregateRisks(url: string): Promise<RiskReport> {
   try {
     const parsed = new URL(url);
     hostname = parsed.hostname;
-    isHttps = parsed.protocol === 'https:';
+    isHttps  = parsed.protocol === 'https:';
   } catch {
     log.warn('Could not parse URL', url);
   }
 
-  // ── Run Engines ──────────────────────────────────────────────────────────────
-  const psychDetection   = detectPsychTactics(document.body);
-  const fieldScan        = scanFields(document);
-  const permissionScan   = getPermissionScanResult();
-  const downloadScan     = getDownloadScanResult();
-  const metaSignals      = detectMetaSignals(document, isHttps);
+  // ── Run all engines in parallel where possible ───────────────────────────────
+  const psychDetection = detectPsychTactics(document.body);
+  const fieldScan      = scanFields(document);
+  const permissionScan = getPermissionScanResult();
+  const downloadScan   = getDownloadScanResult();
+  const metaSignals    = detectMetaSignals(document, isHttps);
+  const urlThreats     = analyzeUrl(url);
+  const { trusted: isTrustedDomain } = getUrlTrustModifier(url);
 
-  // ── Compute Trust Score ──────────────────────────────────────────────────────
+  // AI analysis runs in parallel — if Ollama is offline it returns score=0
+  const aiThreats = await analyzePageDynamically(url, document.body.innerText ?? '');
+
+  if (urlThreats.signals.length > 0) {
+    log.warn(`URL threats: ${urlThreats.summary}`);
+  }
+  if (aiThreats.isMalicious) {
+    log.warn(`AI flagged site as malicious. Score: ${aiThreats.score}. Reason: ${aiThreats.reason}`);
+  }
+
+  // ── Compute Trust Score ───────────────────────────────────────────────────────
   const scoreBreakdown = computeTrustScore({
     psychDetection,
     fieldScan,
@@ -49,6 +56,9 @@ export async function aggregateRisks(url: string): Promise<RiskReport> {
     downloadScan,
     isHttps,
     metaSignals,
+    urlThreats,
+    aiThreats,
+    isTrustedDomain,
   });
 
   const trustScore  = scoreBreakdown.final;
@@ -67,9 +77,10 @@ export async function aggregateRisks(url: string): Promise<RiskReport> {
     downloadScan,
     isHttps,
     metaSignals,
+    urlThreats,
+    aiThreats,
   };
 
-  log.info(`Risk aggregation complete — score=${trustScore}, level=${threatLevel}`);
-
+  log.info(`Analysis complete — score=${trustScore}, level=${threatLevel}, trusted=${isTrustedDomain}`);
   return report;
 }
